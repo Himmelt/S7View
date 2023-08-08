@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace S7Lib
 {
@@ -106,6 +107,33 @@ namespace S7Lib
             }
             throw new PlcException(ErrorCode.ConnectionError, "ID:" + plcId + " 的 PLC 不存在.");
         }
+
+        public static bool A_R_DB_Byte(short id, int db, int start, Task<object> last, out byte data, out Task<object> next)
+        {
+            data = 0;
+            next = last;
+            if (ID_PLC.TryGetValue(id, out Plc plc))
+            {
+                if (!plc.IsConnected)
+                {
+                    plc.OpenAsync();
+                    return false;
+                }
+                if (last == null || last.IsCompleted)
+                {
+                    next = plc.ReadAsync(DataType.DataBlock, db, start, VarType.Byte, 1);
+                }
+                if (last != null && last.IsCompleted)
+                {
+                    data = (byte)last.Result;
+                    return true;
+                }
+                return false;
+            }
+            Log("ID:" + id + " 的 PLC 不存在.");
+            return false;
+        }
+
         public static byte[] R_DB_Bytes(short plcId, int db, int start, int count)
         {
             if (ID_PLC.TryGetValue(plcId, out Plc plc))
@@ -332,6 +360,38 @@ namespace S7Lib
         public static void Release()
         {
             Init();
+        }
+
+        public static void Run(string ip, short type, short rack, short slot, Plc last_plc, Task<byte> last_task, out bool status, out bool link, out string msg, out Plc next_plc, out Task<byte> next_task)
+        {
+            next_plc = last_plc;
+            next_task = last_task;
+            if (last_plc == null)
+            {
+                try
+                {
+                    next_plc = new Plc((CpuType)type, ip, rack, slot);
+                    next_plc.OpenAsync();
+                }
+                catch (Exception e)
+                {
+                    msg = e.Message;
+                }
+            }
+            else
+            {
+                if (last_plc.IsConnected)
+                {
+                    link = true;
+                    next_task = last_plc.ReadStatusAsync();
+                    status = last_plc.ReadStatus() == 0x08;
+                }
+                else
+                {
+                    link = false;
+                    status = false;
+                }
+            }
         }
     }
 }
