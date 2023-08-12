@@ -1,5 +1,4 @@
 ﻿using S7.Net;
-using S7.Net.Types;
 using System;
 using System.Threading.Tasks;
 
