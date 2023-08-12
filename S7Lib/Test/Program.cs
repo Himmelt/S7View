@@ -4,7 +4,8 @@ using System;
 namespace Test {
     internal class Program {
         public static void Main(string[] args) {
-            S7API.TestOpen();
+            int[] o = new int[0];
+            Console.WriteLine(o.GetType());
         }
     }
 }

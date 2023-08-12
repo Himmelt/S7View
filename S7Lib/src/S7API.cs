@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace S7Lib {
@@ -29,22 +28,23 @@ namespace S7Lib {
             }
             return "";
         }
-        private static void Log(string msg) {
-            if (LOG.Count > 20) {
-                LOG.RemoveAt(0);
-            }
-            LOG.Add(DateTime.Now.ToString("[HH:mm:ss.fff] ") + msg);
-        }
-        private static void Log(short plcId, string msg) {
-            if (!PLC_LOG.ContainsKey(plcId)) {
-                PLC_LOG.Add(plcId, new List<string>());
-            }
-            List<string> LOG = PLC_LOG[plcId];
-            if (LOG.Count > 20) {
-                LOG.RemoveAt(0);
-            }
-            LOG.Add(DateTime.Now.ToString("[HH:mm:ss.fff] ") + msg);
-        }
+        // DateTime.Now.ToString("[HH:mm:ss.fff] ")
+        /*        private static void Log(string msg) {
+                    if (LOG.Count > 20) {
+                        LOG.RemoveAt(0);
+                    }
+                    LOG.Add( + msg);
+                }
+                private static void Log(short plcId, string msg) {
+                    if (!PLC_LOG.ContainsKey(plcId)) {
+                        PLC_LOG.Add(plcId, new List<string>());
+                    }
+                    List<string> LOG = PLC_LOG[plcId];
+                    if (LOG.Count > 20) {
+                        LOG.RemoveAt(0);
+                    }
+                    LOG.Add(DateTime.Now.ToString("[HH:mm:ss.fff] ") + msg);
+                }*/
         public static void W_DB_Byte(short plcId, int db, int start, byte data) {
             if (ID_PLC.TryGetValue(plcId, out Plc plc)) {
                 if (!plc.IsConnected) {
@@ -102,7 +102,7 @@ namespace S7Lib {
                 }
                 return false;
             }
-            Log("ID:" + id + " 的 PLC 不存在.");
+            //Log("ID:" + id + " 的 PLC 不存在.");
             return false;
         }
 
@@ -153,43 +153,49 @@ namespace S7Lib {
             }
             throw new PlcException(ErrorCode.ConnectionError, "ID:" + plcId + " 的 PLC 不存在.");
         }
-        public static float R_DB_Float(short plcId, int db, int start) {
-            if (ID_PLC.TryGetValue(plcId, out Plc plc)) {
-                if (!plc.IsConnected) {
-                    plc.Open();
-                }
-                return (float)plc.Read(DataType.DataBlock, db, start, VarType.Real, 1);
-            }
-            throw new PlcException(ErrorCode.ConnectionError, "ID:" + plcId + " 的 PLC 不存在.");
-        }
-        public static float[] R_DB_Floats(short plcId, int db, int start, int count) {
-            if (ID_PLC.TryGetValue(plcId, out Plc plc)) {
-                if (!plc.IsConnected) {
-                    plc.Open();
-                }
-                return (float[])plc.Read(DataType.DataBlock, db, start, VarType.Real, count);
-            }
-            throw new PlcException(ErrorCode.ConnectionError, "ID:" + plcId + " 的 PLC 不存在.");
-        }
-        public static double R_DB_Double(short plcId, int db, int start) {
-            if (ID_PLC.TryGetValue(plcId, out Plc plc)) {
-                if (!plc.IsConnected) {
-                    plc.Open();
-                }
-                return (double)plc.Read(DataType.DataBlock, db, start, VarType.LReal, 1);
-            }
-            throw new PlcException(ErrorCode.ConnectionError, "ID:" + plcId + " 的 PLC 不存在.");
-        }
-        public static double[] R_DB_Doubles(short plcId, int db, int start, int count) {
-            if (ID_PLC.TryGetValue(plcId, out Plc plc)) {
+
+        public static bool R_DB_Value(ref Plc plc, int db, int start, VarType type, int count, out string msg, out object value) {
+            msg = "";
+            value = null;
+            if (plc != null && plc.IsConnected) {
                 try {
-                    return (double[])plc.Read(DataType.DataBlock, db, start, VarType.LReal, count);
+                    value = plc.Read(DataType.DataBlock, db, start, type, count);
+                    return true;
                 } catch (Exception e) {
-                    Log(plcId, e.Message);
+                    msg = e.Message;
                 }
+            } else {
+                msg = "PLC 引用对象不存在 或 PLC 未连接!";
             }
-            Log("ID:" + plcId + " 的 PLC 不存在.");
-            return new double[count];
+            return false;
+        }
+        public static bool R_DB_Float(ref Plc plc, int db, int start, out string msg, out float value) {
+            bool flag = R_DB_Value(ref plc, db, start, VarType.Real, 1, out msg, out object obj);
+            if (obj is float v) {
+                value = v;
+            } else {
+                value = 0;
+            }
+            return flag;
+        }
+        public static bool R_DB_Floats(ref Plc plc, int db, int start, int count, out string msg, out float[] value) {
+            bool flag = R_DB_Value(ref plc, db, start, VarType.Real, count, out msg, out object obj);
+            if (obj is float[] v && v.Length == count) {
+                value = v;
+            } else {
+                value = new float[count];
+            }
+            return flag;
+        }
+        public static bool R_DB_Double(ref Plc plc, int db, int start, out string msg, out double value) {
+            bool flag = R_DB_Value(ref plc, db, start, VarType.LReal, 1, out msg, out object obj);
+            value = (double)obj;
+            return flag;
+        }
+        public static bool R_DB_Doubles(ref Plc plc, int db, int start, out string msg, out double[] value) {
+            bool flag = R_DB_Value(ref plc, db, start, VarType.LReal, 1, out msg, out object obj);
+            value = (double[])obj;
+            return flag;
         }
         public static bool IsConnected(short plcId) {
             if (ID_PLC.TryGetValue(plcId, out Plc plc)) {
@@ -198,7 +204,7 @@ namespace S7Lib {
                 } catch (Exception) {
                 }
             }
-            Log("ID:" + plcId + " 的 PLC 不存在.");
+            //Log("ID:" + plcId + " 的 PLC 不存在.");
             return false;
         }
         public static bool IsRunning(short plcId) {
@@ -208,16 +214,16 @@ namespace S7Lib {
                 } catch (Exception) {
                 }
             }
-            Log("ID:" + plcId + " 的 PLC 不存在.");
+            //Log("ID:" + plcId + " 的 PLC 不存在.");
             return false;
         }
         public static void Open(short id, string ip, short type, short rack, short slot) {
             if (ID_PLC.ContainsKey(id)) {
-                Log("项目中已存在相同 ID:" + id + " 的 PLC.");
+                //Log("项目中已存在相同 ID:" + id + " 的 PLC.");
                 return;
             }
             if (IP.Contains(ip)) {
-                Log("项目中已创建相同 IP:" + ip + " 的 PLC.");
+                //Log("项目中已创建相同 IP:" + ip + " 的 PLC.");
                 return;
             }
             try {
@@ -226,10 +232,10 @@ namespace S7Lib {
                 ID_PLC[id] = plc;
                 plc.ReadTimeout = 500;
                 plc.Open();
-                Log(id, "PLC 已连接.");
+                // Log(id, "PLC 已连接.");
             } catch (Exception e) {
-                Log("PLC ID:" + id + ",IP:" + ip + " 连接失败.");
-                Log(e.Message);
+                // Log("PLC ID:" + id + ",IP:" + ip + " 连接失败.");
+                //Log(e.Message);
             }
         }
 
@@ -237,7 +243,7 @@ namespace S7Lib {
             return ID_PLC.ContainsKey(plcId);
         }
 
-        public static void Run(short plcId, out bool isRunning, out bool isConnected, out string msg) {
+        public static void Run(short plcId, out bool isRunning, out bool isConnected, ref string msg) {
             isRunning = isConnected = false;
             if (ID_PLC.TryGetValue(plcId, out Plc plc)) {
                 try {
@@ -247,11 +253,11 @@ namespace S7Lib {
                     isConnected = plc.IsConnected;
                     isRunning = IsRunning(plcId);
                 } catch (Exception e) {
-                    Log(plcId, "PLC 连接异常.");
-                    Log(plcId, e.Message);
+                    //Log(plcId, "PLC 连接异常.");
+                    // Log(plcId, e.Message);
                 }
             } else {
-                Log(plcId, "ID:" + plcId + " 的 PLC 不存在.");
+                //Log(plcId, "ID:" + plcId + " 的 PLC 不存在.");
             }
             msg = GetLog(plcId);
         }
@@ -277,17 +283,17 @@ namespace S7Lib {
             Init();
         }
 
-        public static void OpenCycle(string ip, short type, short rack, short slot, string _msg, Plc _plc, out bool status, out bool link, out string msg, out Plc plc) {
-            msg = _msg;
-            plc = _plc;
+        public static void OpenCycle(string ip, short type, short rack, short slot, out bool status, out bool link, ref string msg, ref Plc plc) {
+            msg = "";
             link = status = false;
 
-            if (_plc == null) {
-                _plc = plc = new Plc((CpuType)type, ip, rack, slot);
+            if (plc == null) {
+                plc = new Plc((CpuType)type, ip, rack, slot);
+                plc.ReadTimeout = plc.WriteTimeout = 200;
             }
 
             try {
-                Task<byte> status_task = _plc.ReadStatusAsync();
+                Task<byte> status_task = plc.ReadStatusAsync();
                 status_task.Wait(200);
                 if (status_task.IsCompleted && !status_task.IsFaulted) {
                     link = true;
@@ -302,7 +308,7 @@ namespace S7Lib {
             } catch { } finally {
                 if (!link) {
                     try {
-                        Task open_task = _plc.OpenAsync();
+                        Task open_task = plc.OpenAsync();
                         open_task.Wait(200);
                         if (open_task.IsCompleted && !open_task.IsFaulted) {
                             link = true;
