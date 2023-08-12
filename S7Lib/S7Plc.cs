@@ -1,5 +1,6 @@
 ﻿using S7.Net;
 using System;
+using System.Collections;
 using System.Threading.Tasks;
 
 namespace S7Lib {
@@ -10,7 +11,7 @@ namespace S7Lib {
 
         public S7Plc(string ip) : this(ip, 500) { }
 
-        public S7Plc(string ip, short timeout) {
+        public S7Plc(string ip, ushort timeout) {
             plc = new Plc(CpuType.S71500, ip, 0, 0);
             plc.ReadTimeout = plc.WriteTimeout = timeout;
             Task task = plc.OpenAsync();
@@ -28,7 +29,7 @@ namespace S7Lib {
             return plc.IsConnected;
         }
 
-        private object R_DB_Value(short db, short start, VarType type, short count, byte bit = 0) {
+        private object R_DB_Value(ushort db, ushort start, VarType type, ushort count = 1, byte bit = 0) {
             try {
                 Task<object> task = plc.ReadAsync(DataType.DataBlock, db, start, type, count, bit);
                 task.Wait(plc.ReadTimeout);
@@ -41,79 +42,92 @@ namespace S7Lib {
             }
         }
 
-        public bool R_DB_Bit(short db, short start, byte bit) {
-            return (bool)R_DB_Value(db, start, VarType.Bit, 1, bit);
+        public bool R_DB_Bit(ushort db, ushort start, byte bit) {
+            return (bool)R_DB_Value(db, start, VarType.Bit, bit);
         }
 
-        public bool[] R_DB_Bits(short db, short start, short count, byte bit) {
-            return (bool[])R_DB_Value(db, start, VarType.Bit, count, bit);
+        public bool[] R_DB_Bits(ushort db, ushort start, ushort count, byte bit) {
+            if (count <= 0) return new bool[0];
+            object obj = R_DB_Value(db, start, VarType.Bit, count, bit);
+            if (obj is bool b) {
+                return new bool[] { b };
+            } else if (obj is BitArray arr) {
+                bool[] result = new bool[arr.Count];
+                arr.CopyTo(result, 0);
+                return result;
+            }
+            return new bool[0];
         }
 
-        public byte R_DB_Byte(short db, short start) {
-            return (byte)R_DB_Value(db, start, VarType.Byte, 1);
+        public byte R_DB_Byte(ushort db, ushort start) {
+            return (byte)R_DB_Value(db, start, VarType.Byte);
         }
 
-        public byte[] R_DB_Bytes(short db, short start, short count) {
-            return (byte[])R_DB_Value(db, start, VarType.Byte, count);
+        public byte[] R_DB_Bytes(ushort db, ushort start, ushort count) {
+            if (count <= 0) return new byte[0];
+            object obj = R_DB_Value(db, start, VarType.Byte, count);
+            return count > 1 ? (byte[])obj : new byte[] { (byte)obj };
         }
 
-        public UInt16 R_DB_Word(short db, short start) {
-            return (UInt16)R_DB_Value(db, start, VarType.Word, 1);
+        public UInt16 R_DB_Word(ushort db, ushort start) {
+            return (UInt16)R_DB_Value(db, start, VarType.Word);
         }
 
-        public UInt16[] R_DB_Words(short db, short start, short count) {
-            return (UInt16[])R_DB_Value(db, start, VarType.Word, count);
+        public UInt16[] R_DB_Words(ushort db, ushort start, ushort count) {
+            if (count <= 0) return new UInt16[0];
+            object obj = R_DB_Value(db, start, VarType.Word, count);
+            return count > 1 ? (UInt16[])obj : new UInt16[] { (UInt16)obj };
         }
 
-        public UInt32 R_DB_DWord(short db, short start) {
-            return (UInt32)R_DB_Value(db, start, VarType.DWord, 1);
+        public UInt32 R_DB_DWord(ushort db, ushort start) {
+            return (UInt32)R_DB_Value(db, start, VarType.DWord);
         }
 
-        public UInt32[] R_DB_DWords(short db, short start, short count) {
+        public UInt32[] R_DB_DWords(ushort db, ushort start, ushort count) {
             return (UInt32[])R_DB_Value(db, start, VarType.DWord, count);
         }
 
-        public Int16 R_DB_Int16(short db, short start) {
-            return (Int16)R_DB_Value(db, start, VarType.Int, 1);
+        public Int16 R_DB_Int16(ushort db, ushort start) {
+            return (Int16)R_DB_Value(db, start, VarType.Int);
         }
 
-        public Int16[] R_DB_Int16s(short db, short start, short count) {
+        public Int16[] R_DB_Int16s(ushort db, ushort start, ushort count) {
             return (Int16[])R_DB_Value(db, start, VarType.Int, count);
         }
 
-        public Int32 R_DB_Int32(short db, short start) {
-            return (Int32)R_DB_Value(db, start, VarType.DInt, 1);
+        public Int32 R_DB_Int32(ushort db, ushort start) {
+            return (Int32)R_DB_Value(db, start, VarType.DInt);
         }
 
-        public Int32[] R_DB_Int32s(short db, short start, short count) {
+        public Int32[] R_DB_Int32s(ushort db, ushort start, ushort count) {
             return (Int32[])R_DB_Value(db, start, VarType.DInt, count);
         }
 
-        public float R_DB_Float(short db, short start) {
-            return (float)R_DB_Value(db, start, VarType.Real, 1);
+        public float R_DB_Float(ushort db, ushort start) {
+            return (float)R_DB_Value(db, start, VarType.Real);
         }
 
-        public float[] R_DB_Floats(short db, short start, short count) {
+        public float[] R_DB_Floats(ushort db, ushort start, ushort count) {
             return (float[])R_DB_Value(db, start, VarType.Real, count);
         }
 
-        public double R_DB_Double(short db, short start) {
-            return (double)R_DB_Value(db, start, VarType.LReal, 1);
+        public double R_DB_Double(ushort db, ushort start) {
+            return (double)R_DB_Value(db, start, VarType.LReal);
         }
 
-        public double[] R_DB_Doubles(short db, short start, short count) {
+        public double[] R_DB_Doubles(ushort db, ushort start, ushort count) {
             return (double[])R_DB_Value(db, start, VarType.LReal, count);
         }
 
-        public string R_DB_CString(short db, short start, short size) {
+        public string R_DB_CString(ushort db, ushort start, ushort size) {
             return (string)R_DB_Value(db, start, VarType.String, size);
         }
 
-        public string R_DB_S7String(short db, short start, short size) {
+        public string R_DB_S7String(ushort db, ushort start, ushort size) {
             return (string)R_DB_Value(db, start, VarType.S7String, size);
         }
 
-        public string R_DB_S7WString(short db, short start, short size) {
+        public string R_DB_S7WString(ushort db, ushort start, ushort size) {
             return (string)R_DB_Value(db, start, VarType.S7WString, size);
         }
     }
