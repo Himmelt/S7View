@@ -11,7 +11,7 @@ namespace S7Lib {
 
         public S7Plc(string ip) : this(ip, 500) { }
 
-        public S7Plc(string ip, ushort timeout) {
+        public S7Plc(string ip, ushort timeout = 500) {
             plc = new Plc(CpuType.S71500, ip, 0, 0);
             plc.ReadTimeout = plc.WriteTimeout = timeout;
             Task task = plc.OpenAsync();
@@ -43,15 +43,18 @@ namespace S7Lib {
         }
 
         public bool R_DB_Bit(ushort db, ushort start, byte bit) {
-            return (bool)R_DB_Value(db, start, VarType.Bit, bit);
+            return (bool)R_DB_Value(db, (ushort)(start + bit / 8), VarType.Bit, (byte)(bit % 8));
         }
 
-        public bool[] R_DB_Bits(ushort db, ushort start, ushort count, byte bit) {
+        public bool[] R_DB_Bits(ushort db, ushort start, byte bit, ushort count) {
             if (count <= 0) return new bool[0];
-            object obj = R_DB_Value(db, start, VarType.Bit, count, bit);
+            int _bit = bit % 8;
+            int _offset = bit / 8;
+            object obj = R_DB_Value(db, (ushort)(start + _offset), VarType.Bit, (ushort)(count + _bit), (byte)_bit);
             if (obj is bool b) {
                 return new bool[] { b };
             } else if (obj is BitArray arr) {
+                // TODO
                 bool[] result = new bool[arr.Count];
                 arr.CopyTo(result, 0);
                 return result;
@@ -119,16 +122,23 @@ namespace S7Lib {
             return (double[])R_DB_Value(db, start, VarType.LReal, count);
         }
 
-        public string R_DB_CString(ushort db, ushort start, ushort size) {
-            return (string)R_DB_Value(db, start, VarType.String, size);
+        public string R_DB_CString(ushort db, ushort start, ushort size, bool trim = false) {
+            string result = (string)R_DB_Value(db, start, VarType.String, size);
+            int i = result.IndexOf('\0');
+            if (i >= 0) {
+                result = result.Substring(0, i);
+            }
+            return trim ? result.Trim() : result;
         }
 
-        public string R_DB_S7String(ushort db, ushort start, ushort size) {
-            return (string)R_DB_Value(db, start, VarType.S7String, size);
+        public string R_DB_S7String(ushort db, ushort start, ushort size, bool trim = false) {
+            string result = (string)R_DB_Value(db, start, VarType.S7String, size);
+            return trim ? result.Trim() : result;
         }
 
-        public string R_DB_S7WString(ushort db, ushort start, ushort size) {
-            return (string)R_DB_Value(db, start, VarType.S7WString, size);
+        public string R_DB_S7WString(ushort db, ushort start, ushort size, bool trim = false) {
+            string result = (string)R_DB_Value(db, start, VarType.S7WString, size);
+            return trim ? result.Trim() : result;
         }
     }
 }
