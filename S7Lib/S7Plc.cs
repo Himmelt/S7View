@@ -1,6 +1,5 @@
 ﻿using S7.Net;
 using System;
-using System.Collections;
 using System.Threading.Tasks;
 
 namespace S7Lib {
@@ -9,9 +8,8 @@ namespace S7Lib {
 
         private readonly Plc plc;
 
-        public S7Plc(string ip) : this(ip, 500) { }
-
-        public S7Plc(string ip, ushort timeout = 500) {
+        public S7Plc(string ip, ushort timeout = 200) {
+            if (timeout <= 0) timeout = 200;
             plc = new Plc(CpuType.S71500, ip, 0, 0);
             plc.ReadTimeout = plc.WriteTimeout = timeout;
             Task task = plc.OpenAsync();
@@ -43,23 +41,22 @@ namespace S7Lib {
         }
 
         public bool R_DB_Bit(ushort db, ushort start, byte bit) {
-            return (bool)R_DB_Value(db, (ushort)(start + bit / 8), VarType.Bit, (byte)(bit % 8));
+            byte data = R_DB_Byte(db, (ushort)(start + bit / 8));
+            return data.SelectBit(bit % 8);
         }
 
         public bool[] R_DB_Bits(ushort db, ushort start, byte bit, ushort count) {
             if (count <= 0) return new bool[0];
             int _bit = bit % 8;
             int _offset = bit / 8;
-            object obj = R_DB_Value(db, (ushort)(start + _offset), VarType.Bit, (ushort)(count + _bit), (byte)_bit);
-            if (obj is bool b) {
-                return new bool[] { b };
-            } else if (obj is BitArray arr) {
-                // TODO
-                bool[] result = new bool[arr.Count];
-                arr.CopyTo(result, 0);
-                return result;
+            int size = (count + _bit + 7) / 8;
+            byte[] bytes = R_DB_Bytes(db, (ushort)(start + _offset), (ushort)size);
+            bool[] result = new bool[count];
+            for (int i = 0; i < count; i++) {
+                int index = (i + _bit) / 8;
+                result[i] = bytes[index].SelectBit((i + _bit) % 8);
             }
-            return new bool[0];
+            return result;
         }
 
         public byte R_DB_Byte(ushort db, ushort start) {

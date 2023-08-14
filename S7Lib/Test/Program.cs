@@ -9,6 +9,7 @@ namespace Test {
             string s2 = plc.R_DB_CString(6000, 42, 58);
             Console.WriteLine(s1.Length);
             Console.WriteLine(s2.Length);
+            plc.R_DB_Bits(6000, 0, 1, 16);
         }
     }
 }
