@@ -8,9 +8,26 @@ namespace S7Lib {
 
         private readonly Plc plc;
 
-        public S7Plc(string ip, ushort timeout = 200) {
+        public S7Plc(string ip) : this(ip, 200, 1500, 0, 0) { }
+
+        public S7Plc(string ip, ushort timeout = 200) : this(ip, timeout, 1500, 0, 0) { }
+
+        public S7Plc(string ip, ushort timeout = 200, ushort cpuType = 1500, byte rack = 0, byte slot = 0) {
             if (timeout <= 0) timeout = 200;
-            plc = new Plc(CpuType.S71500, ip, 0, 0);
+            CpuType _type;
+            switch (cpuType) {
+                case 200:
+                    _type = CpuType.S7200; break;
+                case 300:
+                    _type = CpuType.S7300; break;
+                case 400:
+                    _type = CpuType.S7400; break;
+                case 1200:
+                    _type = CpuType.S71200; break;
+                default:
+                    _type = CpuType.S71500; break;
+            }
+            plc = new Plc(_type, ip, rack, slot);
             plc.ReadTimeout = plc.WriteTimeout = timeout;
             Task task = plc.OpenAsync();
             task.Wait(timeout);
@@ -408,6 +425,79 @@ namespace S7Lib {
         public string R_DB_S7WString(ushort db, ushort start, ushort size, bool trim = false) {
             string result = (string)R_DB_Value(db, start, VarType.S7WString, size);
             return trim ? result.Trim() : result;
+        }
+
+        private void WriteValue(DataType dataType, ushort db, ushort start, object value) {
+            if (value == null) {
+                throw new Exception("PLC 无法写入 null ：" + GetAddress(dataType, db, start));
+            }
+            try {
+                Task task = plc.WriteAsync(dataType, db, start, value);
+                task.Wait(plc.WriteTimeout);
+                if (!task.IsCompleted || task.IsFaulted) {
+                    throw new Exception("PLC 写入超时：" + GetAddress(dataType, db, start));
+                }
+            } catch (Exception e) {
+                throw new Exception("PLC 写入错误：" + GetAddress(dataType, db, start), e);
+            }
+        }
+
+        private void W_E_Value(ushort start, object value) {
+            WriteValue(DataType.Input, 0, start, value);
+        }
+
+        public void W_E_Byte(ushort start, byte value) {
+            W_E_Value(start, value);
+        }
+
+        public void W_E_Bytes(ushort start, byte[] value, ushort count) {
+            if (value == null || value.Length <= 0 || count <= 0) return;
+            if (count < value.Length) {
+                byte[] tmp = new byte[count];
+                Array.Copy(value, 0, tmp, 0, count);
+                W_E_Value(start, tmp);
+            } else {
+                W_E_Value(start, value);
+            }
+        }
+
+        private void W_DB_Value(ushort db, ushort start, object value) {
+            WriteValue(DataType.DataBlock, db, start, value);
+        }
+
+        private void W_DB_Values<T>(ushort db, ushort start, T[] value, ushort count) {
+            if (value == null || value.Length <= 0 || count <= 0) return;
+            if (count < value.Length) {
+                T[] tmp = new T[count];
+                Array.Copy(value, 0, tmp, 0, count);
+                W_DB_Value(db, start, tmp);
+            } else {
+                W_DB_Value(db, start, value);
+            }
+        }
+
+        public void W_DB_Byte(ushort db, ushort start, byte value) {
+            W_DB_Value(db, start, value);
+        }
+
+        public void W_DB_Bytes(ushort db, ushort start, byte[] value, ushort count) {
+            W_DB_Values(db, start, value, count);
+        }
+
+        public void W_DB_Int16s(ushort db, ushort start, Int16[] value, ushort count) {
+            W_DB_Values(db, start, value, count);
+        }
+
+        public void W_DB_Int32s(ushort db, ushort start, Int32[] value, ushort count) {
+            W_DB_Values(db, start, value, count);
+        }
+
+        public void W_DB_Floats(ushort db, ushort start, float[] value, ushort count) {
+            W_DB_Values(db, start, value, count);
+        }
+
+        public void W_DB_Doubles(ushort db, ushort start, double[] value, ushort count) {
+            W_DB_Values(db, start, value, count);
         }
     }
 }
