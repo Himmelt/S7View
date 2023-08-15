@@ -38,7 +38,7 @@ namespace S7Lib {
                 case DataType.DataBlock:
                     return "DB" + db + ".DBB" + start;
                 case DataType.Counter:
-                    return "C" + start;
+                    return "Z" + start;
                 case DataType.Timer:
                     return "T" + start;
                 default:
@@ -142,25 +142,6 @@ namespace S7Lib {
             return (double[])R_E_Value(start, VarType.LReal, count);
         }
 
-        public string R_E_CString(ushort start, ushort size, bool trim = false) {
-            string result = (string)R_E_Value(start, VarType.String, size);
-            int i = result.IndexOf('\0');
-            if (i >= 0) {
-                result = result.Substring(0, i);
-            }
-            return trim ? result.Trim() : result;
-        }
-
-        public string R_E_S7String(ushort start, ushort size, bool trim = false) {
-            string result = (string)R_E_Value(start, VarType.S7String, size);
-            return trim ? result.Trim() : result;
-        }
-
-        public string R_E_S7WString(ushort start, ushort size, bool trim = false) {
-            string result = (string)R_E_Value(start, VarType.S7WString, size);
-            return trim ? result.Trim() : result;
-        }
-
         private object R_A_Value(ushort start, VarType type, ushort count = 1) {
             return ReadValue(DataType.Output, 0, start, type, count);
         }
@@ -244,25 +225,6 @@ namespace S7Lib {
             return (double[])R_A_Value(start, VarType.LReal, count);
         }
 
-        public string R_A_CString(ushort start, ushort size, bool trim = false) {
-            string result = (string)R_A_Value(start, VarType.String, size);
-            int i = result.IndexOf('\0');
-            if (i >= 0) {
-                result = result.Substring(0, i);
-            }
-            return trim ? result.Trim() : result;
-        }
-
-        public string R_A_S7String(ushort start, ushort size, bool trim = false) {
-            string result = (string)R_A_Value(start, VarType.S7String, size);
-            return trim ? result.Trim() : result;
-        }
-
-        public string R_A_S7WString(ushort start, ushort size, bool trim = false) {
-            string result = (string)R_A_Value(start, VarType.S7WString, size);
-            return trim ? result.Trim() : result;
-        }
-
         private object R_M_Value(ushort start, VarType type, ushort count = 1) {
             return ReadValue(DataType.Memory, 0, start, type, count);
         }
@@ -344,25 +306,6 @@ namespace S7Lib {
 
         public double[] R_M_Doubles(ushort start, ushort count) {
             return (double[])R_M_Value(start, VarType.LReal, count);
-        }
-
-        public string R_M_CString(ushort start, ushort size, bool trim = false) {
-            string result = (string)R_M_Value(start, VarType.String, size);
-            int i = result.IndexOf('\0');
-            if (i >= 0) {
-                result = result.Substring(0, i);
-            }
-            return trim ? result.Trim() : result;
-        }
-
-        public string R_M_S7String(ushort start, ushort size, bool trim = false) {
-            string result = (string)R_M_Value(start, VarType.S7String, size);
-            return trim ? result.Trim() : result;
-        }
-
-        public string R_M_S7WString(ushort start, ushort size, bool trim = false) {
-            string result = (string)R_M_Value(start, VarType.S7WString, size);
-            return trim ? result.Trim() : result;
         }
 
         private object R_DB_Value(ushort db, ushort start, VarType type, ushort count = 1) {
