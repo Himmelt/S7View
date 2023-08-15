@@ -1,5 +1,7 @@
 ﻿using S7.Net;
+using S7.Net.Types;
 using System;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace S7Lib {
@@ -42,6 +44,10 @@ namespace S7Lib {
 
         public bool IsConnected() {
             return plc.IsConnected;
+        }
+
+        public void Close() {
+            plc.Close();
         }
 
         private string GetAddress(DataType dataType, ushort db, ushort start) {
@@ -476,28 +482,176 @@ namespace S7Lib {
             }
         }
 
+        public void W_DB_Bit(ushort db, ushort start, byte bit, bool value) {
+            start += (ushort)(bit / 8);
+            bit = (byte)(bit % 8);
+            byte data = R_DB_Byte(db, start);
+            data.SetBit(bit, value);
+            W_DB_Byte(db, start, data);
+        }
+
+        public void W_DB_Bits(ushort db, ushort start, byte bit, bool[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_DB_Bits(db, start, bit, value, (ushort)value.Length);
+        }
+
+        public void W_DB_Bits(ushort db, ushort start, byte bit, bool[] value, ushort count) {
+            if (value == null || value.Length <= 0 || count <= 0) return;
+            start += (ushort)(bit / 8);
+            bit = (byte)(bit % 8);
+            count = (ushort)Math.Min(count, value.Length);
+            ushort size = (ushort)((bit + count + 7) / 8);
+            byte[] data = R_DB_Bytes(db, start, size);
+            for (int i = bit; i < bit + count; i++) {
+                data[i / 8].SetBit((byte)(i % 8), value[i - bit]);
+            }
+            W_DB_Bytes(db, start, data);
+        }
+
         public void W_DB_Byte(ushort db, ushort start, byte value) {
             W_DB_Value(db, start, value);
+        }
+
+        public void W_DB_Bytes(ushort db, ushort start, byte[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_DB_Values(db, start, value, (ushort)value.Length);
         }
 
         public void W_DB_Bytes(ushort db, ushort start, byte[] value, ushort count) {
             W_DB_Values(db, start, value, count);
         }
 
+        public void W_DB_Int16(ushort db, ushort start, Int16 value) {
+            W_DB_Value(db, start, value);
+        }
+
+        public void W_DB_Int16s(ushort db, ushort start, Int16[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_DB_Values(db, start, value, (ushort)value.Length);
+        }
+
         public void W_DB_Int16s(ushort db, ushort start, Int16[] value, ushort count) {
             W_DB_Values(db, start, value, count);
+        }
+
+        public void W_DB_Int32(ushort db, ushort start, Int32 value) {
+            W_DB_Value(db, start, value);
+        }
+
+        public void W_DB_Int32s(ushort db, ushort start, Int32[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_DB_Values(db, start, value, (ushort)value.Length);
         }
 
         public void W_DB_Int32s(ushort db, ushort start, Int32[] value, ushort count) {
             W_DB_Values(db, start, value, count);
         }
 
+        public void W_DB_Float(ushort db, ushort start, float value) {
+            W_DB_Value(db, start, value);
+        }
+
+        public void W_DB_Floats(ushort db, ushort start, float[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_DB_Values(db, start, value, (ushort)value.Length);
+        }
+
         public void W_DB_Floats(ushort db, ushort start, float[] value, ushort count) {
             W_DB_Values(db, start, value, count);
         }
 
+        public void W_DB_Double(ushort db, ushort start, double value) {
+            W_DB_Value(db, start, value);
+        }
+
+        public void W_DB_Doubles(ushort db, ushort start, double[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_DB_Values(db, start, value, (ushort)value.Length);
+        }
+
         public void W_DB_Doubles(ushort db, ushort start, double[] value, ushort count) {
             W_DB_Values(db, start, value, count);
+        }
+
+        public void W_DB_CString(ushort db, ushort start, string value) {
+            if (value == null || value.Length <= 0) return;
+            W_DB_CString(db, start, value, (ushort)value.Length);
+        }
+
+        public void W_DB_CString(ushort db, ushort start, string value, ushort count) {
+            if (value == null || value.Length <= 0 || count <= 0) return;
+            W_DB_Bytes(db, start, Encoding.ASCII.GetBytes(value), (ushort)Math.Min(value.Length, count));
+        }
+
+        public void W_DB_S7String(ushort db, ushort start, string value) {
+            if (value == null) return;
+            W_DB_S7String(db, start, value, (ushort)Math.Max(1, value.Length));
+        }
+
+        public void W_DB_S7String(ushort db, ushort start, string value, ushort count) {
+            if (value == null || count <= 0) return;
+            if (value.Length == 0) {
+                W_DB_Byte(db, (ushort)(start + 1), 0);
+                return;
+            }
+            byte capacity = R_DB_Byte(db, start);
+            int size = Math.Min(value.Length, Math.Min(capacity, count));
+            byte[] data = new byte[size + 1];
+            data[0] = (byte)size;
+            Encoding.ASCII.GetBytes(value, 0, size, data, 1);
+            W_DB_Bytes(db, (ushort)(start + 1), data, (ushort)data.Length);
+        }
+
+        public void W_DB_S7WString(ushort db, ushort start, string value) {
+            if (value == null) return;
+            W_DB_S7WString(db, start, value, (ushort)Math.Max(1, value.Length));
+        }
+
+        public void W_DB_S7WString(ushort db, ushort start, string value, ushort count) {
+            if (value == null || count <= 0) return;
+            if (value.Length == 0) {
+                W_DB_Bytes(db, (ushort)(start + 2), new byte[] { 0, 0 });
+                return;
+            }
+            ushort capacity = R_DB_Word(db, start);
+            ushort size = (ushort)Math.Min(value.Length, Math.Min(capacity, count));
+            byte[] data = new byte[size * 2 + 2];
+            byte[] word = Word.ToByteArray(size);
+            data[0] = word[0];
+            data[1] = word[1];
+            Encoding.BigEndianUnicode.GetBytes(value, 0, size, data, 2);
+            W_DB_Bytes(db, (ushort)(start + 2), data);
+        }
+    }
+
+    public static class Convert {
+        public static void SetBit(this ref byte _byte, byte bit, bool flag) {
+            if (bit < 0 || bit > 7) return;
+            if (flag) {
+                switch (bit) {
+                    case 0: _byte |= 0x01; return;
+                    case 1: _byte |= 0x02; return;
+                    case 2: _byte |= 0x04; return;
+                    case 3: _byte |= 0x08; return;
+                    case 4: _byte |= 0x10; return;
+                    case 5: _byte |= 0x20; return;
+                    case 6: _byte |= 0x40; return;
+                    case 7: _byte |= 0x80; return;
+                    default: return;
+                }
+            } else {
+                switch (bit) {
+                    case 0: _byte &= 0xFE; return;
+                    case 1: _byte &= 0xFD; return;
+                    case 2: _byte &= 0xFB; return;
+                    case 3: _byte &= 0xF7; return;
+                    case 4: _byte &= 0xEF; return;
+                    case 5: _byte &= 0xDF; return;
+                    case 6: _byte &= 0xBF; return;
+                    case 7: _byte &= 0x7F; return;
+                    default: return;
+                }
+            }
         }
     }
 }
