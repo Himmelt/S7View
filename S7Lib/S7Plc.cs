@@ -20,6 +20,8 @@ namespace S7Lib {
             switch (cpuType) {
                 case 200:
                     _type = CpuType.S7200; break;
+                case 201:
+                    _type = CpuType.S7200Smart; break;
                 case 300:
                     _type = CpuType.S7300; break;
                 case 400:
@@ -31,6 +33,7 @@ namespace S7Lib {
             }
             plc = new Plc(_type, ip, rack, slot);
             plc.ReadTimeout = plc.WriteTimeout = timeout;
+            //plc.Open();
             Task task = plc.OpenAsync();
             task.Wait(timeout);
             if (!task.IsCompleted || task.IsFaulted) {
