@@ -79,6 +79,9 @@ namespace S7Lib {
                 if (!task.IsCompleted || task.IsFaulted) {
                     throw new Exception("PLC 读取超时：" + GetAddress(dataType, db, start));
                 }
+                if (task.Result == null) {
+                    throw new Exception("PLC 读取异常NULL：" + GetAddress(dataType, db, start));
+                }
                 return task.Result;
             } catch (Exception e) {
                 throw new Exception("PLC 读取错误：" + GetAddress(dataType, db, start), e);
