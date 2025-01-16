@@ -439,6 +439,14 @@ namespace S7Lib {
             return trim ? result.Trim() : result;
         }
 
+        public System.DateTime R_DB_DateTime(ushort db, ushort start) {
+            return (System.DateTime)R_DB_Value(db, start, VarType.DateTime);
+        }
+
+        public string R_DB_DateTime(ushort db, ushort start, string format = "yyyy-MM-dd HH:mm:ss") {
+            return ((System.DateTime)R_DB_Value(db, start, VarType.DateTime)).ToString(format);
+        }
+
         private void WriteValue(DataType dataType, ushort db, ushort start, object value) {
             if (value == null) {
                 throw new Exception("PLC 无法写入 null ：" + GetAddress(dataType, db, start));
@@ -471,6 +479,112 @@ namespace S7Lib {
             } else {
                 W_E_Value(start, value);
             }
+        }
+
+        private void W_A_Value(ushort start, object value) {
+            WriteValue(DataType.Output, 0, start, value);
+        }
+
+        private void W_A_Values<T>(ushort start, T[] value, ushort count) {
+            if (value == null || value.Length <= 0 || count <= 0) return;
+            if (count < value.Length) {
+                T[] tmp = new T[count];
+                Array.Copy(value, 0, tmp, 0, count);
+                W_A_Value(start, tmp);
+            } else {
+                W_A_Value(start, value);
+            }
+        }
+
+        public void W_A_Bit(ushort start, byte bit, bool value) {
+            start += (ushort)(bit / 8);
+            bit = (byte)(bit % 8);
+            byte data = R_A_Byte(start);
+            data.SetBit(bit, value);
+            W_A_Byte(start, data);
+        }
+
+        public void W_A_Bits(ushort start, byte bit, bool[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_A_Bits(start, bit, value, (ushort)value.Length);
+        }
+
+        public void W_A_Bits(ushort start, byte bit, bool[] value, ushort count) {
+            if (value == null || value.Length <= 0 || count <= 0) return;
+            start += (ushort)(bit / 8);
+            bit = (byte)(bit % 8);
+            count = (ushort)Math.Min(count, value.Length);
+            ushort size = (ushort)((bit + count + 7) / 8);
+            byte[] data = R_A_Bytes(start, size);
+            for (int i = bit; i < bit + count; i++) {
+                data[i / 8].SetBit((byte)(i % 8), value[i - bit]);
+            }
+            W_A_Bytes(start, data);
+        }
+
+        public void W_A_Byte(ushort start, byte value) {
+            W_A_Value(start, value);
+        }
+
+        public void W_A_Bytes(ushort start, byte[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_A_Values(start, value, (ushort)value.Length);
+        }
+
+        public void W_A_Bytes(ushort start, byte[] value, ushort count) {
+            W_A_Values(start, value, count);
+        }
+
+        public void W_A_Int16(ushort start, Int16 value) {
+            W_A_Value(start, value);
+        }
+
+        public void W_A_Int16s(ushort start, Int16[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_A_Values(start, value, (ushort)value.Length);
+        }
+
+        public void W_A_Int16s(ushort start, Int16[] value, ushort count) {
+            W_A_Values(start, value, count);
+        }
+
+        public void W_A_Int32(ushort start, Int32 value) {
+            W_A_Value(start, value);
+        }
+
+        public void W_A_Int32s(ushort start, Int32[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_A_Values(start, value, (ushort)value.Length);
+        }
+
+        public void W_A_Int32s(ushort start, Int32[] value, ushort count) {
+            W_A_Values(start, value, count);
+        }
+
+        public void W_A_Float(ushort start, float value) {
+            W_A_Value(start, value);
+        }
+
+        public void W_A_Floats(ushort start, float[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_A_Values(start, value, (ushort)value.Length);
+        }
+
+        public void W_A_Floats(ushort start, float[] value, ushort count) {
+            W_A_Values(start, value, count);
+        }
+
+        public void W_A_Double(ushort start, double value) {
+            W_A_Value(start, value);
+        }
+
+        public void W_A_Doubles(ushort start, double[] value) {
+            if (value == null || value.Length <= 0) return;
+            W_A_Values(start, value, (ushort)value.Length);
+        }
+
+        public void W_A_Doubles(ushort start, double[] value, ushort count) {
+            W_A_Values(start, value, count);
         }
 
         private void W_DB_Value(ushort db, ushort start, object value) {
